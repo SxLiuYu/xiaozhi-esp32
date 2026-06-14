@@ -10,6 +10,7 @@
 #include <freertos/task.h>
 #include <esp_network.h>
 #include <esp_log.h>
+#include <nvs_flash.h>
 #include <utility>
 
 #include <font_awesome.h>
@@ -96,6 +97,21 @@ void WifiBoard::TryWifiConnect() {
         esp_timer_start_once(connect_timer_, CONNECT_TIMEOUT_SEC * 1000000ULL);
         WifiManager::GetInstance().StartStation();
     } else {
+        // YUANFANG: hardcode home WiFi if no SSID is configured (factory boot)
+        nvs_handle_t nvs_handle;
+        if (nvs_open("wifi", NVS_READWRITE, &nvs_handle) == ESP_OK) {
+            nvs_set_str(nvs_handle, "ssid", "CMCC-egTm");
+            nvs_set_str(nvs_handle, "password", "fneme97c");
+            nvs_commit(nvs_handle);
+            nvs_close(nvs_handle);
+            ESP_LOGW(TAG, "Yuanfang fallback: wrote hardcoded WiFi SSID=CMCC-egTm to NVS");
+            // Try connecting — WifiManager will load ssid from NVS via SsidManager on its own scan
+            esp_timer_start_once(connect_timer_, CONNECT_TIMEOUT_SEC * 1000000ULL);
+            WifiManager::GetInstance().StartStation();
+            return;
+        }
+        // If NVS open failed, fall through to config mode
+        ESP_LOGE(TAG, "Yuanfang fallback: failed to open NVS wifi namespace");
         // No SSID configured, enter config mode
         // Wait for the board version to be shown
         vTaskDelay(pdMS_TO_TICKS(1500));

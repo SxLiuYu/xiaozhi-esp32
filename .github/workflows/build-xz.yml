@@ -1,0 +1,40 @@
+name: Build xiaozhi waveshare 2.06
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          idf_version: v5.3.2
+          target: esp32s3
+
+      - name: Build waveshare 2.06 AMOLED
+        run: |
+          . ${IDF_PATH}/export.sh
+          cd main/boards/waveshare/esp32-s3-touch-amoled-2.06
+          idf.py build
+
+      - name: Upload firmware artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiaozhi-2.06-firmware
+          path: |
+            main/boards/waveshare/esp32-s3-touch-amoled-2.06/build/*.bin
+            main/boards/waveshare/esp32-s3-touch-amoled-2.06/build/bootloader/*.bin
+            main/boards/waveshare/esp32-s3-touch-amoled-2.06/build/partition_table/*.bin
+            main/boards/waveshare/esp32-s3-touch-amoled-2.06/build/flash_args
+            main/boards/waveshare/esp32-s3-touch-amoled-2.06/build/flasher_args.json
+          retention-days: 7

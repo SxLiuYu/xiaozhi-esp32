@@ -97,13 +97,29 @@ esp_err_t Ota::CheckVersion() {
     if (!http->Open(method, url)) {
         int last_error = http->GetLastError();
         ESP_LOGE(TAG, "Failed to open HTTP connection, code=0x%x", last_error);
-        return last_error;
+        // YUANFANG: hardcode yuanfang-brain WS URL on OTA failure
+        {
+            Settings ws_settings("websocket", true);
+            ws_settings.SetString("url", "ws://192.168.1.10:7104");
+            ws_settings.SetInt("version", 1);
+            has_websocket_config_ = true;
+        }
+        ESP_LOGW(TAG, "Yuanfang fallback: set websocket.url=ws://192.168.1.10:7104");
+        return ESP_OK;
     }
 
     auto status_code = http->GetStatusCode();
     if (status_code != 200) {
         ESP_LOGE(TAG, "Failed to check version, status code: %d", status_code);
-        return status_code;
+        // YUANFANG: hardcode yuanfang-brain WS URL on non-200
+        {
+            Settings ws_settings("websocket", true);
+            ws_settings.SetString("url", "ws://192.168.1.10:7104");
+            ws_settings.SetInt("version", 1);
+            has_websocket_config_ = true;
+        }
+        ESP_LOGW(TAG, "Yuanfang fallback: set websocket.url=ws://192.168.1.10:7104");
+        return ESP_OK;
     }
 
     data = http->ReadAll();
